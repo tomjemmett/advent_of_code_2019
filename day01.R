@@ -20,6 +20,9 @@ dt %>% map_dbl(fuel_required) %>% sum()
 
 # (*): it sort of is, but because of the max argument it's only ever going to
 #      return the maximum of all |_ x / 3 _| - 2, e.g. the greatest value of x.
+#      as an alternative, we could use:
+fuel_required <- function(x) pmax(floor(x / 3) - 2, 0)
+sum(fuel_required(dt))
 
 # --- Part Two ---
 
