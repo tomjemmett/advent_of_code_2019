@@ -14,9 +14,12 @@ fuel_required <- function(x) max(floor(x/3)-2, 0)
 
 # execute the function for each line of the inputs, and sum the results
 dt %>% map_dbl(fuel_required) %>% sum()
-# we have to use a map function here, because our function is not vectorised.
+# we have to use a map function here, because our function is not vectorised*.
 # using map_dbl will execute the function for each of the inputs, return a
 # numeric vector, which we can then simply pass into the sum function.
+
+# (*): it sort of is, but because of the max argument it's only ever going to
+#      return the maximum of all |_ x / 3 _| - 2, e.g. the greatest value of x.
 
 # --- Part Two ---
 
