@@ -1,3 +1,4 @@
+# --- Day 7: Amplification Circuit ---
 library(tidyverse)
 
 dt <- read_file("day07.txt") %>%
