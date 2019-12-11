@@ -23,128 +23,43 @@ get_asteroids <- function(data) {
   mutate(a = row_number())
 }
 
-count_asteroids <- function(asteroids, progress = FALSE) {
-  # add a column called count to the asteroids dataframe by iterating over each
-  # of the values from the "a" column
-  mutate(asteroids, count = map_dbl(a, function(A) {
-    # filter the asteroids dataframe to just get the row where a == A
-    A_df <- filter(asteroids, a == A)
-    # find the coordinates of this asteroid
-    Ax <- A_df$x
-    Ay <- A_df$y
-    
-    # find all of the other asteroids, other than A
-    ast <- asteroids %>% 
-      filter(a != A) %>%
-      # set the coordinates to be relative to A i.e. A = (0,0)
-      mutate(x = x - Ax,
-             y = y - Ay,
-             # calculate the distance to A
-             d = x^2 + y^2) %>%
-      # sort by distance, so the closest is ordered first
-      arrange(d)
-    
-    # build a list of all of the asteroids not visible from A
-    not_visible <- numeric(0)
-    # and a counter of the number of asteroids that are visible
-    ctr <- 0
-    
-    # iterate over all of the asteroids in ast
-    for(i in 1:nrow(ast)) {
-      # if this asteroid is in the list not_visible, then skip over it
-      if (!ast[i,]$a %in% not_visible) {
-        # increment our counter
-        ctr <- ctr + 1
-        
-        # get the distance from A to this asteroid (B) and the coordinates
-        Bd <- ast[i,]$d
-        Bx <- ast[i,]$x
-        By <- ast[i,]$y
-        
-        # find the asteroids hidden by B: first check the special cases
-        if (Bx == 0) {
-          # B is directly above or below A
-          nr <- filter(ast, x == 0)
-        } else if (By == 0) {
-          # B is directly left of right of A
-          nr <- filter(ast, y == 0)
-        } else {
-          # find the slope from A->B, then find any points on that slope
-          m <- By/Bx
-          nr <- filter(ast, y == m*x)
-        }
-        
-        # further filter our list:
-        nr <- filter(nr,
-                     # We need to find only those asteroids that are further
-                     # from A than B is
-                     d > Bd,
-                     # We also need to ensure that we are filtering those that
-                     # are in the same direction as A->B (i.e. not C->A->B, but
-                     # A->B->C)
-                     sign(x) == sign(Bx),
-                     sign(y) == sign(By),
-                     # We can skip any that are already in the not_visible list
-                     !a %in% not_visible) %>%
-          # pull just the id's of the asteroids
-          pull(a)
-        
-        # add these to the list o not_visible
-        not_visible <- c(not_visible, nr)
-      }
-    }
-    # progress counter
-    if (progress) cat(A, "/", max(asteroids$a),"\n")
-    # return the number of visible asteroids
-    return(ctr)
-  }))
-}
-
-# examples
-
-"
-.#..#
-.....
-#####
-....#
-...##
-" %>%
-  str_trim() %>%
-  read_lines() %>%
-  get_asteroids() %>%
-  count_asteroids()
-
-"
-......#.#.
-#..#.#....
-..#######.
-.#.#.###..
-.#..#.....
-..#....#.#
-#..#....#.
-.##.#..###
-##...#..#.
-.#....####
-" %>%
-  str_trim() %>%
-  read_lines() %>%
-  get_asteroids() %>%
-  count_asteroids() %>%
-  arrange(desc(count)) %>%
-  pull(count) %>%
-  max() == 33
-
 # --- Part One ---
 
 dt.asteroids <- dt %>%
   get_asteroids()
 
 part_one <- dt.asteroids %>%
-  count_asteroids(progress = TRUE) %>%
-  arrange(desc(count))
+  # iterate over ever asteroid, placing the station at that station
+  mutate(visible = map_dbl(a, function(A) {
+    # find the asteroid in quesiton
+    A_df <- filter(dt.asteroids, a == A)
+    
+    dt.asteroids %>%
+      # get rid of the asteroid that the station is at
+      filter(a != A) %>%
+      # set the location of every other asteroid to be relative to the station
+      mutate(x = x-A_df$x,
+             y = y-A_df$y,
+             # calculate the distance from the station
+             d = x^2+y^2,
+             # calculate the angle to the asteroid from the station, clockwise, with
+             # 0 = straight up, pi/2 = right, pi = down, 1.5 pi = left
+             theta = (atan2(y, x) + 2.5*pi) %% (2*pi)) %>%
+      # group by the angles
+      group_by(theta) %>%
+      # add a rank based on how far we are from the station
+      mutate(r = rank(d)) %>%
+      # find only the rank 1 rows, i.e. the rows we reach first
+      filter(r == 1) %>%
+      # return the number of rowws
+      nrow()
+  })) %>%
+  # arrange the data by the number of rows
+  arrange(desc(visible))
 
+# find the answer to part one
 part_one %>%
-  pull(count) %>%
+  pull(visible) %>%
   max()
 
 part_one_solution <- part_one %>% head(1)
