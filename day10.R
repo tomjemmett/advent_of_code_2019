@@ -136,8 +136,10 @@ count_asteroids <- function(asteroids, progress = FALSE) {
 
 # --- Part One ---
 
-part_one <- dt %>%
-  get_asteroids() %>%
+dt.asteroids <- dt %>%
+  get_asteroids()
+
+part_one <- dt.asteroids %>%
   count_asteroids(progress = TRUE) %>%
   arrange(desc(count))
 
@@ -145,4 +147,36 @@ part_one %>%
   pull(count) %>%
   max()
 
-part_one %>% head(1) %>% select(x, y)
+part_one_solution <- part_one %>% head(1)
+
+# --- Part Two ---
+
+# we start from pointing directly up, rotate clockwise, and knock off one
+# asteroid at a time, before rotating clockwise.
+dt.asteroids %>%
+  # get rid of the asteroid that the station is at
+  filter(a != part_one_solution$a) %>%
+  # set the location of every other asteroid to be relative to the station
+  mutate(x = x-part_one_solution$x,
+         y = y-part_one_solution$y,
+         # calculate the distance from the station
+         d = x^2+y^2,
+         # calculate the angle to the asteroid from the station, clockwise, with
+         # 0 = straight up, pi/2 = right, pi = down, 1.5 pi = left
+         theta = (atan2(y, x) + 2.5*pi) %% (2*pi)) %>%
+  # group by the angles
+  group_by(theta) %>%
+  # add a rank based on how far we are from the station
+  mutate(r = rank(d)) %>%
+  # get rid of the grouping
+  ungroup() %>%
+  # arrange first based on the rank, then on the angle
+  arrange(r, theta) %>%
+  # add a row number for when we hit the asteroid
+  mutate(k = row_number()) %>%
+  # find the 200th
+  filter(k == 200) %>%
+  # calculate the answer
+  mutate(answer = (x+part_one_solution$x)*100+y+part_one_solution$y) %>%
+  # show the answer!
+  pull(answer)
