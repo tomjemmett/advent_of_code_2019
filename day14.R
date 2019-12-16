@@ -96,6 +96,16 @@ part_one_solve <- function(g, fuel_required = 1) {
   
   # queues are FIFO: first in, first out
   
+  # build a vector for the vertices that counts how many of that vertex we need
+  required <- numeric(length(V(g)))
+  names(required) <- V(g)$name
+  # initialize the fuel item only
+  required[["FUEL"]] <- fuel_required
+  
+  # build a vector for the vertices that keeps track of how many we have created
+  create <- numeric(length(V(g)))
+  names(create) <- V(g)$name
+  
   # while we have items in the queue
   while (length(queue) > 0) {
     # remove the first item in the queue
@@ -117,44 +127,29 @@ part_one_solve <- function(g, fuel_required = 1) {
     # to the visited list
     if (length(n_in) == 0) {
       visited <- append(visited, vertex)
+      
+      # work out how many extra items we require to create, that is the required
+      # amount for this vertex should be divisible by the amount that we create of
+      # this vertex
+      extra <- (-required[[vertex]] %% V(g)[[vertex]]$weight)
+      # update the required and the create vectors
+      required[[vertex]] <- required[[vertex]] + extra
+      create[[vertex]] <- required[[vertex]] / V(g)[[vertex]]$weight
+      
+      # find the neighbours and the edges
+      n <- neighbors(g, vertex)
+      e <- incident_edges(g, vertex)[[1]]
+      
+      # work out how many of the neighbours we need to create
+      r <- e$weight * create[[vertex]]
+      
+      # update the neighbors required amounts
+      required[n$name] <- required[n$name] + r 
     } else {
       # otherwise, we need to come back to this vertex later, put it to the end
       # of the queue
       queue <- append(queue, vertex)
     }
-    
-    queue
-  }
-  
-  # build a vector for the vertices that counts how many of that vertex we need
-  required <- numeric(length(V(g)))
-  names(required) <- V(g)$name
-  # initialize the fuel item only
-  required[["FUEL"]] <- fuel_required
-  
-  # build a vector for the vertices that keeps track of how many we have created
-  create <- numeric(length(V(g)))
-  names(create) <- V(g)$name
-  
-  # iterate through the vertices in the topological sort order we found above
-  for (vertex in visited) {
-    # work out how many extra items we require to create, that is the required
-    # amount for this vertex should be divisible by the amount that we create of
-    # this vertex
-    extra <- (-required[[vertex]] %% V(g)[[vertex]]$weight)
-    # update the required and the create vectors
-    required[[vertex]] <- required[[vertex]] + extra
-    create[[vertex]] <- required[[vertex]] / V(g)[[vertex]]$weight
-    
-    # find the neighbours and the edges
-    n <- neighbors(g, vertex)
-    e <- incident_edges(g, vertex)[[1]]
-    
-    # work out how many of the neighbours we need to create
-    r <- e$weight * create[[vertex]]
-    
-    # update the neighbors required amounts
-    required[n$name] <- required[n$name] + r 
   }
   
   # return the required amount of ORE
@@ -176,30 +171,38 @@ part_one
 # if we start with a worst case scenario of generating 1 fuel (the left), and a
 # best case of creating as much fuel as the ore_limit (the right), we can then
 # try solving the problem with the mid point of the left and right.
-
-part_two  <- 0
-ore_limit <- 1000000000000
-right     <- ore_limit
-left      <- 1
-# if we ever set the left to be greater than the right, the right less than
-# the left, or the left = right, then we have found the solution
-while (left <= right) {
-  mid <- round((left + right) / 2)
-  
-  required_ore <- part_one_solve(dt.g, mid)
-  # if we haven't used as much ore as our limit, then set the left case to be 1
-  # greater than the best case, and update our part_two value
-  if (required_ore < ore_limit) {
-    part_two <- max(part_two, mid)
-    left <- mid + 1
-  # in this case the solution found requires more ore than we have available, so
-  # sest the right value to be one less than the mid value.
-  } else if (required_ore > ore_limit) {
-    right <- mid - 1
-  # we have found a perfect solution!
-  } else {
-    part_two <- mid
+part_two_solve <- function(g, ore_limit) {
+  part_two  <- 0
+  right     <- ore_limit
+  left      <- 1
+  # if we ever set the left to be greater than the right, the right less than
+  # the left, or the left = right, then we have found the solution
+  while (left <= right) {
+    mid <- round((left + right) / 2)
+    
+    suppressWarnings(
+      required_ore <- part_one_solve(g, mid)
+    )
+    # if we haven't used as much ore as our limit, then set the left case to be 1
+    # greater than the best case, and update our part_two value
+    if (required_ore < ore_limit) {
+      part_two <- max(part_two, mid)
+      left <- mid + 1
+    # in this case the solution found requires more ore than we have available, so
+    # sest the right value to be one less than the mid value.
+    } else if (required_ore > ore_limit) {
+      right <- mid - 1
+    # we have found a perfect solution!
+    } else {
+      part_two <- mid
+    }
   }
+  part_two
 }
 
+# example
+create_graph(ex3) %>%
+  part_two_solve(1000000000000) == 82892753
+
+part_two <- part_two_solve(dt.g, 1000000000000)
 part_two
