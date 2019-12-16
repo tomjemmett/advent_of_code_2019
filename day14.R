@@ -126,10 +126,6 @@ part_one_solve <- function(g, fuel_required = 1) {
     queue
   }
   
-  # remove the "ORE" vertex from the list of visited vertices, we don't need to
-  # visit this again
-  visited <- visited[visited != "ORE"]
-  
   # build a vector for the vertices that counts how many of that vertex we need
   required <- numeric(length(V(g)))
   names(required) <- V(g)$name
@@ -161,12 +157,8 @@ part_one_solve <- function(g, fuel_required = 1) {
     required[n$name] <- required[n$name] + r 
   }
   
-  # now, calculate for the ore how many we need
-  ore_n <- neighbors(g, "ORE", "in")
-  ore_r <- required[ore_n$name] / ore_n$weight
-  ore_w <- incident_edges(g, "ORE", "in")[[1]]$weight
-  
-  sum(ore_r * ore_w)
+  # return the required amount of ORE
+  return (required[["ORE"]])
 }
 # examples
 create_graph(ex1) %>% part_one_solve() == 31
