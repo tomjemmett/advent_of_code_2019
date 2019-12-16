@@ -88,28 +88,28 @@ part_one_solve <- function(g, fuel_required = 1) {
   # first, build the order that we need to traverse the vertices.
   # we need to hit each vertex at a point that we wont reach it later, e.g. we
   # create a topological sort
-  # create a list for the visited vertices, and a stack that we pop/push the
+  # create a list for the visited vertices, and a queue that we can add the
   # vertices to
   visited <- list()
   # start off with the fuel node
-  stack <- list("FUEL")
+  queue <- list("FUEL")
   
-  # stacks are FIFO: first in, first out
+  # queues are FIFO: first in, first out
   
-  # while we have items in the stack
-  while (length(stack) > 0) {
-    # remove the first item in the stack
-    vertex <- stack[[1]]
-    # and remove this item from the stack (it may appear multiple times)
-    stack <- stack[stack != vertex]
+  # while we have items in the queue
+  while (length(queue) > 0) {
+    # remove the first item in the queue
+    vertex <- queue[[1]]
+    # and remove this item from the queue (it may appear multiple times)
+    queue <- queue[queue != vertex]
     
     # find the neighbours coming in
     n_in  <- neighbors(g, vertex, "in")$name
     # find the neighbours coming out
     n_out <- neighbors(g, vertex, "out")$name
     
-    # append the vertices going out to the stack, we will visit these later
-    stack <- append(stack, n_out)
+    # append the vertices going out to the queue, we will visit these later
+    queue <- append(queue, n_out)
     
     # filter the in vertices to be those that we haven't yet visited
     n_in <- n_in[!n_in %in% visited]
@@ -119,11 +119,11 @@ part_one_solve <- function(g, fuel_required = 1) {
       visited <- append(visited, vertex)
     } else {
       # otherwise, we need to come back to this vertex later, put it to the end
-      # of the stack
-      stack <- append(stack, vertex)
+      # of the queue
+      queue <- append(queue, vertex)
     }
     
-    stack
+    queue
   }
   
   # remove the "ORE" vertex from the list of visited vertices, we don't need to
