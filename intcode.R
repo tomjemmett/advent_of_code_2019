@@ -74,10 +74,8 @@ intcode_add_input <- function(intcode, ...) {
       " (Rel Mode: ", intcode$relmode_ptr, ")\n", sep = "")
   cat("op_list:\n")
   print(intcode$op_list, p = intcode$program_counter)
-  cat("Output: \n")
-  print(intcode$output)
-  cat("Input:\n")
-  print(intcode$input)
+  cat("Output length:", length(intcode$output), "\n")
+  cat("Input length:", length(intcode$input), "\n")
 }
 
 intcode_run <- function(intcode,
