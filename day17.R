@@ -86,7 +86,7 @@ get_path_str <- function() {
               `4` = c( 0, -1),
               `5` = c( 0,  1))
   
-  s <- ""
+  s <- character(0)
   mv <- 0
   repeat {
     # can we move in the current direction?
@@ -98,18 +98,14 @@ get_path_str <- function() {
     }
     
     if (mv > 0) {
-      s <- paste0(s, mv+1)
+      s <- c(s, as.character(mv+1))
     }
     mv <- 0
     if (abs(d[[1]]) == 1) {
       nd <- c(0, 1)
       np <- p + nd
       if (m[np[[1]], np[[2]]] == 1) {
-        if (d[[1]] == 1) {
-          s <- paste0(s, "L")
-        } else {
-          s <- paste0(s, "R")
-        }
+        s <- c(s, ifelse(d[[1]] == 1, "L", "R"))
         d <- nd
         p <- np
         next
@@ -118,11 +114,7 @@ get_path_str <- function() {
       nd <- c(0, -1) 
       np <- p + nd
       if (m[np[[1]], np[[2]]] == 1) {
-        if (d[[1]] == 1) {
-          s <- paste0(s, "R")
-        } else {
-          s <- paste0(s, "L")
-        }
+        s <- c(s, ifelse(d[[1]] == 1, "R", "L"))
         d <- nd
         p <- np
         next
@@ -131,11 +123,7 @@ get_path_str <- function() {
       nd <- c(1, 0)
       np <- p + nd
       if (m[np[[1]], np[[2]]] == 1) {
-        if (d[[2]] == 1) {
-          s <- paste0(s, "R")
-        } else {
-          s <- paste0(s, "L")
-        }
+        s <- c(s, ifelse(d[[2]] == 1, "R", "L"))
         d <- nd
         p <- np
         next
@@ -144,11 +132,7 @@ get_path_str <- function() {
       nd <- c(-1, 0)
       np <- p + nd
       if (m[np[[1]], np[[2]]] == 1) {
-        if (d[[2]] == 1) {
-          s <- paste0(s, "L")
-        } else {
-          s <- paste0(s, "R")
-        }
+        s <- c(s, ifelse(d[[2]] == 1, "L", "R"))
         d <- nd
         p <- np
         next
@@ -159,38 +143,95 @@ get_path_str <- function() {
   }
   s
 }
-s <- get_path_str()
 
-str_split(s, "")[[1]] %>%
-  paste0(collapse = ",") %>%
-  str_replace_all("(\\d),(\\d)","\\1\\2") %>%
-  str_split(",") %>%
-  pluck(1) %>%
-  compress()
+# found this function implemented in Python on the Advent of Code subreddit.
+# reimplemented in R
+compress <- function(path) {
+  # recursive function that takes as input the remaining path to be explored,
+  # what paths have been assigned to what function, and what functions remain
+  # to be assigned
+  compress_fn <- function(path,
+                          assigned = list(),
+                          c_remain = c('A', 'B', 'C')) {
+    # if the path is an empty vector, then return the path and assigned values
+    if (length(path) == 0) return (list(path, assigned))
+    
+    seq <- NULL
+    best_assigned <- list()
+    
+    # iterate through the path: start with a path of lenght 1, and iterate to
+    # a path of length at maximum 9 (so a string of length 10)
+    for (i in 1:(min(length(path), 9))) {
+      # create a string by combining the elements of the path with a ","
+      # seperating each element
+      test_string <- paste(path[1:i], collapse = ",")
+      
+      # if the string is longer than 20 characters then it can't be used as a
+      # function, so break
+      if (str_length(test_string) >= 20) break()
+      
+      # take a copy of the current assigned list
+      assigned_iter <- assigned
+      # check: has this string already been assigned?
+      if (is.null(assigned[[test_string]])) {
+        # it hasn't
+        # if there is nothing left to be assigned, then move to the next item in
+        # the loop
+        if (length(c_remain) == 0) next()
+        # otherwise, set this test_string to be the first remaining function in
+        # c_remain
+        assigned_iter[[test_string]] <- c_remain[[1]]
+        # call this function again, but exclude the values from path used so far
+        # and the value from c_remain we just used
+        rest <- compress_fn(path[-(1:i)], assigned_iter, c_remain[-1])
+      } else {
+        # call this function again, but exclude the values from path used so far
+        rest <- compress_fn(path[-(1:i)], assigned, c_remain)
+      }
+      
+      # if the first item in rest is not null
+      if (!is.null(rest[[1]])) {
+        # check to see if the first item in rest is longer than the current
+        # value for seq
+        if (is.null(seq) | length(rest[[1]]) < length(seq) - 1) {
+          # it is, so update seq
+          seq <- c(assigned_iter[[test_string]], rest[[1]])
+          # replace best_assigend with assigned_iter
+          best_assigned <- assigned_iter
+          # add all of the values from the second item in rest to best_assigned
+          for (k in names(rest[[2]])) {
+            best_assigned[[k]] <- rest[[2]][[k]]
+          }
+        }
+      }
+    }
+    # return our best result so far
+    return (list(seq, best_assigned))
+  }
+  
+  # iteratively call the path compression function, then return the results in
+  # a more useful way where each function (main, A, B, C) is listed
+  x <- compress_fn(path)
+  res <- list(main = x[[1]])
+  
+  for (k in names(x[[2]])) {
+    res[[ x[[2]][[k]] ]] <- k
+  }
+  
+  res
+}
 
-a <- "R6L10R8R8"
-b <- "R12L8L10"
-c <- "R12L10R6L10"
-
-main <- s %>%
-  str_replace_all(a, "A") %>%
-  str_replace_all(b, "B") %>%
-  str_replace_all(c, "C")
-
-input <- c(main,a,b,c,"n\n") %>%
-  map_chr(str_replace_all, "([ABCAB])(?=[ABCAB])", "\\1,") %>%
-  map_chr(str_replace_all, "([RL])(?=\\d)", "\\1,") %>%
-  map_chr(str_replace_all, "(\\d)(?=[RL])", "\\1,") %>%
+input <- c(compress(get_path_str()), "n\n") %>%
+  map(paste, collapse = ",") %>%
   paste(collapse = "\n")
 
-input
-
-ic <- intcode_create(dt) %>%
-  intcode_run_to_input()
-
-ic <- asc(input)[,1] %>%
-  reduce(intcode_add_input, .init = ic) %>%
+ic <- dt %>%
+  intcode_create() %>%
+  intcode_add_ascii(input) %>%
   intcode_run()
 
-out <- intcode_output(ic)
-out[length(out)]
+# get the maximum output value, this should be > 127 and it should be the
+# last value
+ic %>%
+  intcode_output() %>%
+  max()

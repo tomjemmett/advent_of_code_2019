@@ -191,3 +191,28 @@ intcode_clear_output <- function(intcode) {
   intcode$output <- numeric(0)
   intcode
 }
+
+# adds a string as ascii input
+intcode_add_ascii <- function(ic, str) {
+  x <- paste0(str, "\n") %>% asc()
+  
+  # the intcode_add_input expects arguments to be passed to it by ..., so we
+  # need to use the lift_dl function from purrr to allow us to pass in a vector
+  # instead
+  lift_dl(partial(intcode_add_input, ic))(x[,1])
+}
+
+# show output if it's ascii
+intcode_ascii_output <- function(ic, clear = TRUE) {
+  ic %>% 
+    intcode_output() %>% 
+    chr() %>% 
+    paste(collapse = "") %>% 
+    cat()
+  
+  if (clear) {
+    ic <- intcode_clear_output(ic)
+  }
+  
+  ic
+}
