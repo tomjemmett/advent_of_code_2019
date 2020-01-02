@@ -1,15 +1,11 @@
 # --- Day 18: Many-Worlds Interpretation ---
 
-library(sets) # load before tidyverse!
 library(tidyverse)
 library(datastructures)
 library(memoise)
 library(Rcpp)
 library(compiler)
 library(tictoc)
-
-# warning: this is not quick! on my machine, part one takes ~ 4 minutes to run,
-# part two takes ~7.5 minutes to run!
 
 dt <- read_lines("day18.txt") %>%
   str_split("", simplify = TRUE)
@@ -27,13 +23,13 @@ solve <- cmpfun(function(maze, pos) {
   reachable_keys_mf <- memoise(reachable_keys)
   
   # what are the keys that we need to find?
-  all_keys <- lift_dl(set)(maze[maze %in% letters])
+  all_keys <- maze[maze %in% letters]
   
   # create a priority queue: we will visit nodes based on the distance (smaller
   # distances are visited first)
   q <- binomial_heap("numeric")
   # insert the initial positions into the queue
-  insert(q, 0, list(d = 0, pos = pos, keys = set()))
+  insert(q, 0, list(d = 0, pos = pos, keys = ""))
   
   # what keys have been seen by each robot?
   # 1st list is for the robots
@@ -44,10 +40,10 @@ solve <- cmpfun(function(maze, pos) {
   seen <- map(seq_along(pos),
               ~map(1:nrow(maze),
                    ~map(1:ncol(maze),
-                        ~set())))
+                        ~character(0))))
   # used for printing progress
   ctr <- 0
-  max_keys <- 0
+  max_keys <- 1
   
   # while we have items in the queue
   while (size(q) > 0) {
@@ -62,9 +58,9 @@ solve <- cmpfun(function(maze, pos) {
     if (max_keys < length(n$keys)) {
       max_keys <- length(n$keys)
       cat("\rctr:", str_pad(ctr, 5),
-          " (keys: ", str_pad(max_keys, 2),
-          ", d: ", str_pad(n$d, 4), ")\n",
-          sep = "")
+          " (keys: ", str_pad(max_keys-1, 2),
+          ", d: ", str_pad(n$d, 4),
+          ")\n", sep = "")
     } else if (!ctr %% 100) {
       # every 100 iterations outut the counter if we haven't found a key
       cat("\rctr:", str_pad(ctr, 5),
@@ -73,7 +69,7 @@ solve <- cmpfun(function(maze, pos) {
     
     # if we have found all the keys return the distance (as we are using a
     # minimum priority queue then the current distance is the minimum possible)
-    if (n$keys == all_keys) return (n$d)
+    if (all(all_keys %in% n$keys)) return (n$d)
     
     # iterate over each of the robots
     for (p in seq_along(n$pos)) {
@@ -82,16 +78,17 @@ solve <- cmpfun(function(maze, pos) {
       cy <- n$pos[[p]][[2]]
       
       # get the current seen keys
+      kv <- paste(n$keys, collapse = "")
       ks <- seen[[p]][[cy]][[cx]]
       # check to see if the keys that we have in n already exist for this robot:
       # in other words, check to make sure we haven't already been at this point
       # with this robot
-      if (n$keys %e% ks) next()
+      if (kv %in% ks) next()
       # mark this position for this robot with these keys as seen
-      seen[[p]][[cy]][[cx]] <- ks | set(n$keys)
+      seen[[p]][[cy]][[cx]] <- c(ks, kv)
       
       # find the reachable keys from this position with the currently see keys
-      rk <- reachable_keys_mf(maze, cx, cy, as.character(n$keys))
+      rk <- reachable_keys_mf(maze, cx, cy, n$keys[n$keys %in% letters])
       
       # iterate over each of the reachable keys
       for (r in rk) {
@@ -103,7 +100,10 @@ solve <- cmpfun(function(maze, pos) {
         # insert this new position into the priority queue
         insert(q, nd, list(d    = nd,
                            pos  = npos,
-                           keys = n$keys | r$c))
+                           # ensure that the keys are always sorted in order
+                           # as our keys will already mostly be in the correct
+                           # order we can get away with using a shell sort
+                           keys = sort(c(n$keys, r$c), method = "shell")))
       }
     }
   }
@@ -131,4 +131,4 @@ part_two <- solve(dt2, list(c(sx-1, sy-1),
 toc()
 
 cat("Part One: ", part_one, "\n",
-    "Part Two: ", part_two, "\n")
+    "Part Two: ", part_two, "\n", sep = "")
