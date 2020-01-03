@@ -135,7 +135,7 @@ for (i in 1:8) {
 # iterate through all the combinations, but start from the centre and work out
 # in both directions
 i <- 0
-for (v in c(0, rep(1:127, each = 2) * c(1,-1)) + 113) {
+for (v in c(0, rep(1:127, each = 2) * c(1,-1)) + 128) {
   i <- i + 1
   # show progress
   cat("\014(",str_pad(v, 3),") ", str_pad(i, 3), "/",length(cm),"\n", sep = "")
