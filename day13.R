@@ -251,9 +251,7 @@ part_one <- ic %>%
   intcode_run() %>%
   get_board()
 
-part_one
-
-sum(part_one == 2)
+sum(part_one$board == 2)
 
 # --- Part Two ---
 
@@ -307,7 +305,12 @@ run_game <- function(ic) {
     b <- get_board(ic)
     #print(b)
     
-    if (ctr %% 100 == 0) print(b$score)
+    if (ctr %% 100 == 0) {
+      cat("\rRunning: ctr = ", ctr,
+          ", score = ", b$score,
+          ", remaining = ", sum(b$board == 2),
+          sep = "")
+    }
     
     old_ball <- ball
     ball <- c((1:nrow(b$board))[apply(b$board, 1, function(x) any(x == 4))],
@@ -330,6 +333,7 @@ run_game <- function(ic) {
       intcode_add_input(input) %>%
       intcode_run_to_input()
   }
+  cat("\nComplete\n")
   return(ic)
 }
 
