@@ -158,4 +158,4 @@ part_two <- function() {
   }
 }
 
-part_two(ic)
+part_two()
